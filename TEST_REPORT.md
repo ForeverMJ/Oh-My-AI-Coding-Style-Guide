@@ -36,7 +36,7 @@ These cases were chosen because they cover the most important behavior claims:
 ### Environment
 
 - Runtime: current OpenCode agent environment
-- Repository under test: `/home/taotao/workspace/dev/Oh-My-AI-Coding-Style-Guide`
+- Repository under test: `/home/user/workspace/dev/Oh-My-AI-Coding-Style-Guide`
 - Skill under test: `SKILL.md`
 
 ### Repository state observed during testing
