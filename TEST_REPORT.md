@@ -442,3 +442,99 @@ The main remaining limitation is not the skill contract itself. It is the evalua
 - large parallel background batches may time out,
 - so future regression runs should prefer smaller or staged execution groups,
 - especially when the goal is contract verification rather than throughput.
+
+## 14. Practical OpenCode Usability Evaluation Update
+
+After the behavior-focused validation work above, an additional **practical paired OpenCode evaluation** was run to answer a different question:
+
+> Is invoking this skill actually useful in real OpenCode usage, rather than only in behavior-contract validation scenarios?
+
+This update should be read as a **practical usability supplement**, not as a replacement for the earlier contract-validation results.
+
+### 14.1 Scope of the practical evaluation
+
+Two paired comparisons were run in `opencode run --pure` mode:
+
+1. a **minimal sparse-repo** case in this repository, and
+2. a **more realistic medium-repo** case in the local `opencode` repository.
+
+`--pure` mode was used to isolate skill behavior from local plugin-agent resolution issues in the non-pure host configuration.
+
+### 14.2 Why this update matters
+
+The earlier sections of this report prove that `SKILL.md` is behaviorally valid against its contract.
+
+This new update answers a narrower operational question:
+
+- whether explicit skill invocation improves context discipline in real runs,
+- whether it reduces irrelevant exploration,
+- and whether that practical value is large enough to justify the extra step of loading the skill.
+
+### 14.3 Summary of practical results
+
+#### Sparse-repo case
+
+**Result:** Clear practical win
+
+Observed outcome:
+
+- the skill-assisted run avoided the baseline’s unnecessary broad whole-repo glob,
+- reached a similar answer,
+- and used fewer total tokens.
+
+Interpretation:
+
+- in a small documentation-heavy repository, the skill materially improved context discipline and efficiency.
+
+#### Medium-repo case (`opencode`)
+
+**Result:** Mixed practical result
+
+Observed outcome:
+
+- the corrected skill-assisted run reached a final recommendation very similar to the no-skill baseline,
+- with only a marginal improvement in scope discipline,
+- and a higher total token cost in that run.
+
+Interpretation:
+
+- in a more realistic medium-sized repository, the skill still helped constrain the final change boundary,
+- but it did not improve efficiency and did not reduce exploration cost in that sample.
+
+### 14.4 Practical conclusion
+
+In these two paired runs, the practical takeaway is more specific than the contract-validation conclusion:
+
+1. **Yes, invoking the skill can be useful.**
+2. Its strongest observed value is **context discipline, scope control, and anti-overreach**.
+3. It should not currently be treated as a guarantee of lower token usage in every repository.
+4. Its benefit was strongest in the sparse-repo case and only marginal in the medium-repo case.
+
+In other words, the skill is currently best understood as a **behavior-governance layer** first, and an efficiency optimization second.
+
+### 14.5 Cross-repo deployment note
+
+One practical issue was exposed during the medium-repo evaluation:
+
+- a project-local skill installed only under this repository’s `.opencode/skills/` directory was **not** discoverable when running OpenCode inside a different repository.
+
+For this cross-repo evaluation, the same skill had to be installed globally at:
+
+- `~/.config/opencode/skills/context-optimization/SKILL.md`
+
+This is an environment/discovery-scope issue, not a behavior failure of the skill itself.
+
+### 14.6 Detailed report
+
+The full practical evaluation record, including:
+
+- prompts,
+- commands,
+- repository SHAs,
+- token totals,
+- raw-output provenance,
+- and a Chinese summary,
+
+is saved in:
+
+- `OPENCODE_SKILL_EVALUATION_RUN_2026-05-06.md`

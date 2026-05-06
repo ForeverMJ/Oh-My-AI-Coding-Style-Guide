@@ -9,6 +9,32 @@ This document records two paired OpenCode evaluations for the local `context-opt
 
 The goal was not to prove that the skill always improves outputs. The goal was to measure whether invoking the skill is materially useful in practice, and under what conditions.
 
+## 中文摘要
+
+这次评估一共做了两组 OpenCode 对照测试：
+
+1. 一个在当前仓库上的**最小稀疏仓库**案例。
+2. 一个在本地 `opencode` 仓库上的**更接近真实开发**案例。
+
+结论可以概括为：
+
+- **在小而稀疏的仓库里，这个 skill 明显有用。**
+  - skill 版减少了无关探索，避免了不必要的全仓扫描。
+  - 最终答案质量接近，但 token 消耗更低。
+
+- **在这次中等规模、真实代码仓库案例里，这个 skill 仍然有用，但收益方式不同。**
+  - 它更像一种“上下文治理”和“范围收紧”工具。
+  - 它帮助 agent 更强调最小安全改动面，少把无关内部实现纳入修改范围。
+  - 但在这次 run 里，它**没有节省 token**，反而因为 skill 加载和额外检索，整体成本更高。
+
+- **因此，从这两次 run 看，更稳定观察到的价值不是保证更便宜，而是让行为更克制、更不容易过度探索。**
+
+如果把结论说得更实用一些：
+
+- 当仓库较小、任务较窄、默认 agent 容易乱扫上下文时，这个 skill 的收益最明显。
+- 在这次 medium-repo run 里，它的价值更偏“约束 agent 的工作方式”，而不是“稳定降低 token”。
+- 如果要跨 repo 直接发现这个 skill，应装到全局或目标 repo；只放在当前项目的 `.opencode/skills/` 里，不会被其他仓库发现。
+
 ## Environment and Constraints
 
 - Date: 2026-05-06
