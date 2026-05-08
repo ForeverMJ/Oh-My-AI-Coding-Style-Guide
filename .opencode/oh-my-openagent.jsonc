@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
+
+  // Agent configuration
+  "agents": {
+    "sisyphus": {
+      // Inject context optimization principles into every Sisyphus session
+      "prompt_append": "file://./.opencode/context-optimization-prompt.md"
+    }
+  },
+
+  // Skills configuration
+  "skills": {
+    // Load external skills from custom paths.
+    // These paths are loaded IN ADDITION to the standard skill directories
+    // (.opencode/skills/, ~/.config/opencode/skills/, etc.).
+    //
+    // Supported options per source:
+    //   path      — local directory or remote URL (required)
+    //   recursive — scan subdirectories (default: false)
+    //   glob      — filter files by glob pattern (e.g. "**/SKILL.md")
+    "sources": [
+      // Example: load skills from a cloned community skills repo
+      // { "path": "~/oh-my-openagent-skills", "recursive": true },
+
+      // Example: load a single skill directory
+      // { "path": "~/external-skills/my-awesome-skill" }
+    ]
+  }
+}

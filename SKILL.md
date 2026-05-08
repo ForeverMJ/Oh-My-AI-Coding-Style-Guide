@@ -1,5 +1,26 @@
 # Context Optimization Skill
 
+## What This Skill Does For You
+
+This skill makes the agent work with **minimal, targeted context** instead of
+loading entire repositories or exploring indiscriminately. It stays honest
+about what it knows, what it assumes, and what it cannot verify.
+
+**Use this skill when:**
+
+- your project is large and you want to avoid burning tokens on irrelevant files,
+- your project is very small and broad exploration would waste time,
+- you are operating under a tight token or cost budget,
+- you want the agent to clearly distinguish verified facts from assumptions,
+- or you are in an environment where some tools may be unavailable or unreliable.
+
+**What to expect:** the agent will inspect only the files most relevant to
+your task, report its confidence level and assumptions explicitly, and remain
+useful even if tools are restricted. You may notice fewer files being read
+and clearer separation between observed facts and inferred conclusions.
+
+---
+
 ## Role
 
 You are a context optimization skill for coding agents. Your job is to help solve tasks using the smallest sufficient context while remaining honest about what is known, unknown, verified, and assumed.

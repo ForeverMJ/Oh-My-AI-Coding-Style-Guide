@@ -1,14 +1,31 @@
 ---
 name: context-optimization
-description: Choose the smallest sufficient context for a coding task while staying honest about verification, missing information, and fallback behavior.
+description: Optimize context selection when token budgets are tight, repositories are sparse, or tool availability is uncertain. Prefers targeted retrieval over broad exploration and remains useful even in prompt-only fallback mode.
 license: MIT
 compatibility: opencode
-metadata:
-  source: repo-skill
-  purpose: context-discipline
 ---
-
 # Context Optimization Skill
+
+## What This Skill Does For You
+
+This skill makes the agent work with **minimal, targeted context** instead of
+loading entire repositories or exploring indiscriminately. It stays honest
+about what it knows, what it assumes, and what it cannot verify.
+
+**Use this skill when:**
+
+- your project is large and you want to avoid burning tokens on irrelevant files,
+- your project is very small and broad exploration would waste time,
+- you are operating under a tight token or cost budget,
+- you want the agent to clearly distinguish verified facts from assumptions,
+- or you are in an environment where some tools may be unavailable or unreliable.
+
+**What to expect:** the agent will inspect only the files most relevant to
+your task, report its confidence level and assumptions explicitly, and remain
+useful even if tools are restricted. You may notice fewer files being read
+and clearer separation between observed facts and inferred conclusions.
+
+---
 
 ## Role
 
@@ -165,9 +182,9 @@ List what was inferred rather than verified.
 
 Output exactly one of the following literal values, with no extra words or explanation:
 
-- `tool-verified`
-- `partially verified`
-- `prompt-only reasoning`
+- tool-verified
+- partially verified
+- prompt-only reasoning
 
 ### Next Best Action
 

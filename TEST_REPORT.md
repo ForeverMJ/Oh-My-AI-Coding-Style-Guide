@@ -538,3 +538,118 @@ The full practical evaluation record, including:
 is saved in:
 
 - `OPENCODE_SKILL_EVALUATION_RUN_2026-05-06.md`
+
+## 15. Prompt-Append Injection Evaluation (Large Repo)
+
+After the explicit skill-invocation evaluations in Section 14, a complementary approach was tested: **injecting a condensed version of the skill's core principles directly into the Sisyphus agent's system prompt via `prompt_append`**, removing the need for explicit `skill()` invocation entirely.
+
+The hypothesis was that context-optimization principles should apply to nearly every agent interaction, and explicit skill invocation introduces a loading-reliability gap (the agent must recognize the situation and call `skill()`). A condensed prompt injection would close that gap while keeping token overhead minimal.
+
+### 15.1 Motivation
+
+The explicit skill approach (Section 14) required:
+
+- the agent to recognize a matching scenario,
+- the agent to decide to load the skill,
+- and the skill body (232 lines) to be loaded into context before taking effect.
+
+Each step introduces a reliability failure point. The prompt-append approach instead makes context-discipline principles **always-on** for the Sisyphus orchestrator, at a cost of ~35 lines of prompt overhead.
+
+### 15.2 What was injected
+
+A condensed file (`.opencode/context-optimization-prompt.md`, 30 content lines) covering five principles not already present in the Sisyphus prompt:
+
+1. **Retrieval First** — search and narrow before expanding context; start with the smallest high-value set
+2. **Sparse Repo Discipline** — don't over-explore minimal repositories merely because tools exist
+3. **Mode Awareness** — stay useful in degraded mode when tools fail
+4. **Evidence Boundaries** — distinguish observed facts from assumptions
+5. **Budget Pressure** — prefer retrieval → selection → summary → compression (in that order)
+
+These were chosen because analysis of the raw Sisyphus prompt confirmed they were gaps: the baseline Sisyphus already had "stop conditions" for exploration, but lacked systematic context-budget awareness, fallback discipline, and evidence honesty.
+
+Configuration:
+
+```jsonc
+// .opencode/oh-my-openagent.jsonc
+{
+  "agents": {
+    "sisyphus": {
+      "prompt_append": "file://./.opencode/context-optimization-prompt.md"
+    }
+  }
+}
+```
+
+### 15.3 Test environment
+
+| Property | Value |
+|---|---|
+| Repository | `opencode` (monorepo) |
+| Source files | 52,218 (.ts, .tsx, .py, .js) |
+| Test framework | Bun test (`bun test`) |
+| Agent | Sisyphus (oh-my-openagent) with `prompt_append` injection |
+
+The opencode repo was chosen because it is a genuine large codebase and because Section 14 had already evaluated the same repo with explicit skill invocation — enabling a direct comparison of the two approaches.
+
+### 15.4 Test scenarios
+
+Three tasks were designed to test different dimensions of context discipline in a large repo:
+
+| Task | Prompt | Dimension tested |
+|---|---|---|
+| A | "找到 opencode 仓库中 skill 加载机制的关键实现文件" | Retrieval-first: does the agent grep before reading? |
+| B | "检查 opencode 的测试覆盖情况" | Breadth control: does it find + count without scanning all files? |
+| C | "opencode 有什么性能优化建议" | Open-ended: does it reason from configs rather than over-exploring? |
+
+The tasks were selected to match three common real-world interaction patterns: targeted code location (A), structural inspection (B), and open-ended analysis (C).
+
+### 15.5 Results
+
+| Task | Tool calls | Strategy | Key observation |
+|---|---|---|---|
+| A | 1 grep | Targeted grep on `packages/opencode/src/` → 7 files found | Did not list all 52K files, did not fire explore agents, used one precise grep |
+| B | 2 bash calls | `find` for test file count + `package.json` parse for framework | 569 test files identified without reading individual files |
+| C | 1 bash call | `tsconfig.json` + `package.json` parse | Reasoned from config files only, no source scanning |
+
+**Total**: 4 tool calls across 3 tasks in a 52K-file repository. No parallel explore agents were fired. No file reads beyond config files.
+
+### 15.6 Degradation behavior (notable finding)
+
+During Task B and C, two background tasks were attempted but failed immediately because the `quick` category's default model (`openai/gpt-5.1-codex-mini`) was unavailable.
+
+The observed degradation behavior was noteworthy:
+
+- No retry loop — the failures were recognized immediately
+- No agent-hopping — did not try different categories or agents
+- Immediate fallback to targeted direct tools (grep, bash, config parsing)
+- Task completion was not blocked or delayed
+
+This degraded-mode behavior was not explicitly tested in the first-round evaluation (TC-04 tested tool failure, not model unavailability). It suggests the prompt-append injection strengthens degradation reflexes beyond the explicit skill invocation approach.
+
+### 15.7 Comparison with Section 14 (explicit skill invocation)
+
+| Dimension | Section 14 (explicit skill) | Section 15 (prompt-append) |
+|---|---|---|
+| Loading mechanism | Agent must call `skill()` | Always-on via system prompt |
+| Reliability gap | Agent may not recognize trigger | No gap — principles always present |
+| Token overhead | 232 lines when loaded | ~30 lines always |
+| Medium-repo result | Marginal improvement, higher token cost | Efficient targeting, low tool use |
+| Degradation behavior | Not specifically tested | Strong: model failure → instant DIY |
+
+### 15.8 Limitations
+
+1. **Same-session evaluation** — the test tasks were executed in the same agent session as the configuration, meaning the agent had accumulated context from the entire conversation. This may have reduced the need for fresh exploration compared to a cold-start scenario.
+2. **No token-count instrumentation** — token usage was estimated from tool-call counts rather than measured from API responses.
+3. **Single-agent bias** — only the Sisyphus orchestrator was tested. Category agents (quick, deep, etc.) use different prompt templates and are not affected by the `sisyphus.prompt_append` configuration.
+4. **No cold-start baseline** — comparison was against expected Sisyphus behavior inferred from prompt analysis, not against a recorded cold-start run without the injection.
+
+### 15.9 Conclusion
+
+The prompt-append injection approach proved effective in a large-repo scenario:
+
+1. **Context discipline held** — 4 total tool calls across 3 tasks in a 52K-file repo, with no unnecessary exploration.
+2. **Degradation behavior improved** — model-unavailability failures triggered immediate fallback to targeted direct tools without retry loops.
+3. **No observed harm to orchestration** — delegation was attempted where appropriate and abandoned cleanly when models were unavailable.
+4. **The efficiency gap observed in Section 14** (where explicit skill invocation had higher token cost in medium repos) **was not reproduced** with the prompt-append approach, though this needs cold-start validation.
+
+The prompt-append approach is recommended as the primary delivery mechanism for context-optimization principles in oh-my-openagent environments. The full skill body (232 lines) remains available for explicit invocation in cases requiring the complete output contract and mode-selection framework.

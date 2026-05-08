@@ -7,11 +7,77 @@ from pathlib import Path
 
 SKILL_NAME = "context-optimization"
 SKILL_DESCRIPTION = (
-    "Choose the smallest sufficient context for a coding task while staying honest "
-    "about verification, missing information, and fallback behavior."
+    "Optimize context selection when token budgets are tight, repositories are "
+    "sparse, or tool availability is uncertain. Prefers targeted retrieval over "
+    "broad exploration and remains useful even in prompt-only fallback mode."
 )
 SKILL_LICENSE = "MIT"
+AGENTS_MARKER = "context-optimization:skill-loader"
+AGENTS_SNIPPET = """\
+## Skill Loading
+
+Prioritize retrieval-led reasoning over pretrained-knowledge-led reasoning.
+When a task involves sparse repositories, limited token budgets, or uncertain
+tool availability, load the `context-optimization` skill before proceeding.
+"""
+ALWAYS_ON_MARKER = "context-optimization:always-on"
+PRINCIPLES_CONTENT = """\
+## Context Optimization Principles
+
+Maximize output per token consumed. Every file read, every search run, every
+agent fired costs real money and latency. Treat context budget as a first-class
+constraint.
+
+### Retrieval First
+Prefer targeted inspection over broad exploration. Search and narrow before
+expanding context:
+- Start with the smallest high-value context set
+- Expand only when genuinely blocked
+- Never load entire repositories unless the task explicitly requires full audit
+
+### Sparse Repo Discipline
+If the repository is small (few files, documentation-heavy, no complex code):
+- Do not over-explore merely because tools exist
+- Do not assume or invent structure not present
+
+### Mode Awareness
+- If tools are available and relevant, use them, sparingly
+- If tools fail or are absent, stay useful in degraded mode
+- Never claim inspection not actually performed
+
+### Evidence Boundaries
+- Distinguish: observed facts / tool-verified findings / assumptions / unknown
+- Do not fabricate files, modules, or tool outputs
+- If not read, do not imply it was read
+
+### Budget Pressure
+- If context window is filling up, summarize low-priority material
+- Compression is a last resort, not a first move
+- Prefer: retrieval \u2192 selection \u2192 summary \u2192 compression
+"""
+
 EMBEDDED_SKILL_BODY = """# Context Optimization Skill
+
+## What This Skill Does For You
+
+This skill makes the agent work with **minimal, targeted context** instead of
+loading entire repositories or exploring indiscriminately. It stays honest
+about what it knows, what it assumes, and what it cannot verify.
+
+**Use this skill when:**
+
+- your project is large and you want to avoid burning tokens on irrelevant files,
+- your project is very small and broad exploration would waste time,
+- you are operating under a tight token or cost budget,
+- you want the agent to clearly distinguish verified facts from assumptions,
+- or you are in an environment where some tools may be unavailable or unreliable.
+
+**What to expect:** the agent will inspect only the files most relevant to
+your task, report its confidence level and assumptions explicitly, and remain
+useful even if tools are restricted. You may notice fewer files being read
+and clearer separation between observed facts and inferred conclusions.
+
+---
 
 ## Role
 
@@ -314,6 +380,7 @@ def install_skill(
     scope: str,
     dry_run: bool,
     force: bool,
+    init_always_on: bool,
     home: Path,
     cwd: Path,
     root: Path | None = None,
@@ -323,10 +390,21 @@ def install_skill(
     content = render_skill(resolved_target, body)
     destination_dir = target_dir(resolved_target, scope, home, cwd)
     destination_file = destination_dir / "SKILL.md"
+    principles_file = destination_dir / "principles.md"
 
     if dry_run:
         print(f"[dry-run] target={resolved_target} scope={scope}")
         print(f"[dry-run] would write {destination_file}")
+        print(f"[dry-run] would write {principles_file}")
+        if scope == "project":
+            agents_path = cwd / "AGENTS.md"
+            marker = f"<!-- {AGENTS_MARKER} -->"
+            if agents_path.exists() and marker in agents_path.read_text(encoding="utf-8"):
+                print(f"[dry-run] AGENTS.md already contains skill instruction, would skip")
+            else:
+                print(f"[dry-run] would inject skill instruction into {agents_path}")
+        if scope == "project" and init_always_on:
+            _dry_run_always_on(resolved_target, cwd)
         return destination_file
 
     destination_dir.mkdir(parents=True, exist_ok=True)
@@ -341,8 +419,118 @@ def install_skill(
             )
 
     destination_file.write_text(content, encoding="utf-8")
+    principles_file.write_text(PRINCIPLES_CONTENT, encoding="utf-8")
     print(f"Installed {SKILL_NAME} for {resolved_target} at {destination_file}")
+
+    if scope == "project":
+        inject_agents_instruction(cwd)
+        if init_always_on:
+            inject_always_on(resolved_target, cwd)
+
     return destination_file
+
+
+def inject_agents_instruction(cwd: Path) -> None:
+    agents_path = cwd / "AGENTS.md"
+    marker = f"<!-- {AGENTS_MARKER} -->"
+
+    if agents_path.exists():
+        existing = agents_path.read_text(encoding="utf-8")
+        if marker in existing:
+            return
+        new_section = f"\n\n{marker}\n{AGENTS_SNIPPET}\n"
+        agents_path.write_text(existing.rstrip() + new_section, encoding="utf-8")
+    else:
+        project_name = cwd.resolve().name
+        content = f"""# AGENTS.md — {project_name}
+
+{marker}
+{AGENTS_SNIPPET}
+"""
+        agents_path.write_text(content, encoding="utf-8")
+
+    print(f"Injected skill instruction into {agents_path}")
+
+
+def inject_always_on(target: str, cwd: Path) -> None:
+    if target == "opencode":
+        _inject_opencode_always_on(cwd)
+    elif target == "claude":
+        _inject_claude_always_on(cwd)
+    elif target == "codex":
+        _inject_codex_always_on(cwd)
+
+
+def _dry_run_always_on(target: str, cwd: Path) -> None:
+    if target == "opencode":
+        config_path = cwd / ".opencode" / "oh-my-openagent.jsonc"
+        print(f"[dry-run] would create/update {config_path} with prompt_append")
+    elif target == "claude":
+        claude_path = cwd / "CLAUDE.md"
+        print(f"[dry-run] would inject principles into {claude_path}")
+    elif target == "codex":
+        agents_path = cwd / "AGENTS.md"
+        print(f"[dry-run] would inject principles into {agents_path}")
+
+
+def _inject_opencode_always_on(cwd: Path) -> None:
+    config_dir = cwd / ".opencode"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = config_dir / "oh-my-openagent.jsonc"
+    principles_path = config_dir / "skills" / SKILL_NAME / "principles.md"
+
+    content = f"""{{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
+
+  "agents": {{
+    "sisyphus": {{
+      "prompt_append": "file://{principles_path}"
+    }}
+  }}
+}}
+"""
+    config_path.write_text(content, encoding="utf-8")
+    print(f"Created always-on config at {config_path}")
+
+
+def _inject_claude_always_on(cwd: Path) -> None:
+    claude_path = cwd / "CLAUDE.md"
+    marker = f"<!-- {ALWAYS_ON_MARKER} -->"
+    section = f"\n\n{marker}\n{PRINCIPLES_CONTENT.rstrip()}\n"
+
+    if claude_path.exists():
+        existing = claude_path.read_text(encoding="utf-8")
+        if marker in existing:
+            return
+        claude_path.write_text(existing.rstrip() + section, encoding="utf-8")
+    else:
+        claude_path.write_text(f"# CLAUDE.md\n\n{marker}\n{PRINCIPLES_CONTENT.rstrip()}\n", encoding="utf-8")
+
+    print(f"Injected always-on principles into {claude_path}")
+
+
+def _inject_codex_always_on(cwd: Path) -> None:
+    agents_path = cwd / "AGENTS.md"
+    marker = f"<!-- {ALWAYS_ON_MARKER} -->"
+
+    if agents_path.exists():
+        existing = agents_path.read_text(encoding="utf-8")
+        if marker in existing:
+            return
+        section = f"\n\n{marker}\n{PRINCIPLES_CONTENT.rstrip()}\n"
+        agents_path.write_text(existing.rstrip() + section, encoding="utf-8")
+    else:
+        content = f"""# AGENTS.md — {cwd.resolve().name}
+
+<!-- {AGENTS_MARKER} -->
+{AGENTS_SNIPPET}
+
+{marker}
+{PRINCIPLES_CONTENT.rstrip()}
+"""
+        agents_path.write_text(content, encoding="utf-8")
+
+    print(f"Injected always-on principles into {agents_path}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -363,6 +551,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--dry-run", action="store_true", help="Print actions without writing files.")
     parser.add_argument("--force", action="store_true", help="Overwrite existing files if content differs.")
+    parser.add_argument(
+        "--init-always-on",
+        action="store_true",
+        help="Inject context-optimization principles into the host's always-on prompt file."
+    )
     parser.add_argument(
         "--print-codex-agents-snippet",
         action="store_true",
@@ -388,6 +581,7 @@ def main(argv: list[str] | None = None) -> int:
         scope=args.scope,
         dry_run=args.dry_run,
         force=args.force,
+        init_always_on=args.init_always_on,
         home=home,
         cwd=cwd,
     )
