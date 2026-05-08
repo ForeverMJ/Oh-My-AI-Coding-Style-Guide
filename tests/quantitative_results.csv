@@ -1,0 +1,13 @@
+task_id,variant,input_tokens,output_tokens,total_tokens,quality_pass
+T1,baseline,184183,3583,187766,True,
+T1,skill,159388,3458,162846,True,
+T2,baseline,25451,797,26248,False,
+T2,skill,17283,1059,18342,False,
+T3,baseline,16554,551,17105,True,
+T3,skill,17170,599,17769,True,
+T4,baseline,TIMEOUT,,,,
+T4,skill,379516,8234,387750,True,
+T5,baseline,136762,6087,142849,True,
+T5,skill,86035,5356,91391,True,
+T6,baseline,TIMEOUT,,,,
+T6,skill,425960,8058,434018,True,

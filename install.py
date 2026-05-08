@@ -423,9 +423,12 @@ def install_skill(
     print(f"Installed {SKILL_NAME} for {resolved_target} at {destination_file}")
 
     if scope == "project":
-        inject_agents_instruction(cwd)
-        if init_always_on:
+        if init_always_on and resolved_target == "codex":
             inject_always_on(resolved_target, cwd)
+        else:
+            inject_agents_instruction(cwd)
+            if init_always_on:
+                inject_always_on(resolved_target, cwd)
 
     return destination_file
 
@@ -511,21 +514,22 @@ def _inject_claude_always_on(cwd: Path) -> None:
 
 def _inject_codex_always_on(cwd: Path) -> None:
     agents_path = cwd / "AGENTS.md"
-    marker = f"<!-- {ALWAYS_ON_MARKER} -->"
+    always_on_marker = f"<!-- {ALWAYS_ON_MARKER} -->"
+    skill_loader_marker = f"<!-- {AGENTS_MARKER} -->"
 
     if agents_path.exists():
         existing = agents_path.read_text(encoding="utf-8")
-        if marker in existing:
+        if always_on_marker in existing:
             return
-        section = f"\n\n{marker}\n{PRINCIPLES_CONTENT.rstrip()}\n"
+        if skill_loader_marker in existing:
+            idx = existing.index(skill_loader_marker)
+            existing = existing[:idx].rstrip()
+        section = f"\n\n{always_on_marker}\n{PRINCIPLES_CONTENT.rstrip()}\n"
         agents_path.write_text(existing.rstrip() + section, encoding="utf-8")
     else:
         content = f"""# AGENTS.md — {cwd.resolve().name}
 
-<!-- {AGENTS_MARKER} -->
-{AGENTS_SNIPPET}
-
-{marker}
+{always_on_marker}
 {PRINCIPLES_CONTENT.rstrip()}
 """
         agents_path.write_text(content, encoding="utf-8")

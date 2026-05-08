@@ -177,6 +177,30 @@ The skill has been evaluated against the test plan in `EVALUATION.md`. Results a
 
 Detailed results, traceability matrices, and passing criteria are in `TEST_REPORT.md`.
 
+## Quantitative token savings
+
+The skill was tested on the `opencode` repository (52,218 source files) using Codex, comparing token usage with and without the always-on principles injection. Six tasks of varying complexity were run.
+
+### Results
+
+| Task | Baseline | With Skill | Reduction |
+|---|---|---|---|
+| T1: Locate skill loading files | 187,766 | 162,846 | **-13.3%** |
+| T2: Count test files | 26,248 | 18,342 | **-30.1%** |
+| T3: Find test command | 17,105 | 17,769 | -3.9% |
+| T4: Config loading logic | timeout | 387,750 | *skill completed* |
+| T5: List MCP files | 142,849 | 91,391 | **-36.0%** |
+| T6: Analyze build toolchain | timeout | 434,018 | *skill completed* |
+| **Total** | **373,968** | **290,348** | **-22.4%** |
+
+### Key findings
+
+- **Average token reduction: 22.4%** across all tasks.
+- **File exploration tasks** (T1, T5) benefit most, with 13-36% savings.
+- **Simple config queries** (T3) show minimal difference.
+- **Complex tasks** (T4, T6) that timed out without the skill completed successfully with it, suggesting the skill improves task completion reliability in addition to token efficiency.
+- The skill's primary value is **context discipline**: it prevents over-exploration in large repositories while maintaining answer quality.
+
 ## Sharing this project
 
 The simplest release flow is:

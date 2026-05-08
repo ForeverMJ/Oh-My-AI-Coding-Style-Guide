@@ -303,8 +303,23 @@ class InstallTests(unittest.TestCase):
             self.assertTrue(agents_md.exists())
             content = agents_md.read_text(encoding="utf-8")
             self.assertIn(install.ALWAYS_ON_MARKER, content)
-            self.assertIn(install.AGENTS_MARKER, content)
+            self.assertNotIn(install.AGENTS_MARKER, content)
             self.assertIn("Retrieval First", content)
+
+    def test_codex_without_always_on_still_injects_skill_loader(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            cwd = Path(tmp) / "project"
+            root = Path(tmp) / "repo"
+            home.mkdir()
+            cwd.mkdir()
+            root.mkdir()
+            (root / "SKILL.md").write_text("# Context Optimization Skill\n", encoding="utf-8")
+            install.install_skill(target="codex", scope="project", dry_run=False, force=False, init_always_on=False, home=home, cwd=cwd, root=root)
+            agents_md = cwd / "AGENTS.md"
+            content = agents_md.read_text(encoding="utf-8")
+            self.assertIn(install.AGENTS_MARKER, content)
+            self.assertNotIn(install.ALWAYS_ON_MARKER, content)
 
     def test_always_on_is_idempotent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
