@@ -397,12 +397,15 @@ def install_skill(
         print(f"[dry-run] would write {destination_file}")
         print(f"[dry-run] would write {principles_file}")
         if scope == "project":
-            agents_path = cwd / "AGENTS.md"
-            marker = f"<!-- {AGENTS_MARKER} -->"
-            if agents_path.exists() and marker in agents_path.read_text(encoding="utf-8"):
-                print(f"[dry-run] AGENTS.md already contains skill instruction, would skip")
+            if init_always_on and resolved_target == "codex":
+                print(f"[dry-run] Codex always-on: would inject only principles (no skill-loader)")
             else:
-                print(f"[dry-run] would inject skill instruction into {agents_path}")
+                agents_path = cwd / "AGENTS.md"
+                marker = f"<!-- {AGENTS_MARKER} -->"
+                if agents_path.exists() and marker in agents_path.read_text(encoding="utf-8"):
+                    print(f"[dry-run] AGENTS.md already contains skill instruction, would skip")
+                else:
+                    print(f"[dry-run] would inject skill instruction into {agents_path}")
         if scope == "project" and init_always_on:
             _dry_run_always_on(resolved_target, cwd)
         return destination_file
